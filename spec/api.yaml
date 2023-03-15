@@ -1,0 +1,61 @@
+swagger: "2.0"
+info:
+  description: "我就是一個測試的專案"
+  version: "change me.version"
+  title: "測試專案"
+host: "localhost:3000"
+tags:
+- name: "test"
+  description: "測試專案 相關 API"
+  x-internal-id: "test-Service"
+schemes:
+- "http"
+- "https"
+paths:
+  /users/{id}:
+    parameters:
+      - name: id
+        in: path
+        description: 學號/人事代號
+        type: string
+        required: true
+    get:
+      operationId: get-user-info
+      summary: "得到使用者的資訊"
+      tags:
+        - test
+      description: "得到使用者的資訊"
+      security:
+        - api-key: []
+      responses:
+        "200":
+          description: "回應使用者的 2FA 資訊"
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                description: "說明訊息"
+                enum:
+                  - "get user info successful"
+            required:
+              - message
+        "500":
+          description: "伺服器端錯誤"
+          schema:
+            $ref: "#/definitions/DefaultError"
+securityDefinitions:
+  api-key:
+    type: "apiKey"
+    name: "X-API-KEY"
+    in: "header"
+definitions:
+  DefaultError:
+      type: object
+      properties:
+        message:
+          type: string
+          description: "錯誤訊息"
+          example: "error occur"
+      required:
+        - message
