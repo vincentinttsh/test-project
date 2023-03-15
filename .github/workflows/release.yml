@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  generate-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: change release name to tag name
+        run: |
+          sed -i "s/change me.version/${{ github.ref_name }}/g" spec/api.yaml
+          sed -i "s/change me.version/${{ github.ref_name }}/g" package.json
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Remove unneeded files
+        run: rm -rf .github
+
+      - name: Create release archive
+        run: cd .. && tar -zcf  tmp.tar.gz --exclude-vcs test-project && mv tmp.tar.gz test-project/release.tar.gz
+
+      - name: add release tag on file name
+        run: mv release.tar.gz test-project-code-${{ github.ref_name }}.tar.gz
+
+      - name: Generate HTML documentation
+        uses: openapi-generators/openapitools-generator-action@v1
+        with:
+          generator: 	html2
+          openapi-file: spec/api.yaml
+          config-file: spec/config.yaml
+          generator-tag: v5.4.0
+
+      - name: Generate README PDF
+        uses: baileyjm02/markdown-to-pdf@v1
+        with:
+          input_path: README.md
+          output_dir: docs
+          build_html: false
+
+      - name: move file
+        run: mv html2-client/index.html test-project-api-${{ github.ref_name }}.html && cp docs/README.pdf test-project-README-${{ github.ref_name }}.pdf
+
+      - name: Upload Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "test-project-api-${{ github.ref_name }}.html, test-project-README-${{ github.ref_name }}.pdf, test-project-code-${{ github.ref_name }}.tar.gz"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          makeLatest: true
+          generateReleaseNotes: true
+          skipIfReleaseExists: true
+          name: "Test Project ${{ github.ref_name }}"
