@@ -5,4 +5,8 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
+app.get('/spec', (req, res) => {
+  res.send('Hello Spec!')
+})
+
 module.exports = app;
